@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>حجز تذكرة TEDx</title>
+  <style>
+    body { font-family: Arial; padding: 20px; direction: rtl; background: #f9f9f9; }
+    form { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+    button { background-color: #D11F26; color: white; font-weight: bold; cursor: pointer; }
+    button:hover { background-color: #a5141a; }
+    #statusMsg { font-weight: bold; text-align: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2 style="text-align: center;">حجز تذكرة TEDx</h2>
+  <form id="ticketForm">
+    <input type="text" name="fullName" placeholder="الاسم الكامل" required />
+    <input type="email" name="email" placeholder="البريد الإلكتروني" required />
+    <input type="tel" name="phone" placeholder="رقم الهاتف" required />
+    <label>ارفع صورة التحويل:</label>
+    <input type="file" id="receipt" accept="image/*" required />
+    <button type="submit">احجز التذكرة</button>
+    <p id="statusMsg"></p>
+  </form>
+
+  <script>
+    const form = document.getElementById("ticketForm");
+    const statusMsg = document.getElementById("statusMsg");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusMsg.textContent = "جارٍ إرسال البيانات...";
+      statusMsg.style.color = "black";
+
+      const fullName = form.fullName.value;
+      const email = form.email.value;
+      const phone = form.phone.value;
+      const receiptFile = document.getElementById("receipt").files[0];
+
+      if (!receiptFile) {
+        statusMsg.textContent = "من فضلك ارفع صورة التحويل.";
+        statusMsg.style.color = "red";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Image = reader.result.split(",")[1];
+
+        const data = {
+          fullName,
+          email,
+          phone,
+          receipt: base64Image
+        };
+
+        try {
+fetch("https://script.google.com/macros/s/AKfycbwo9CggCsFU1jNj2grmTnsOrMO3s0zqO9w2WJjp6s14Z7ebbMETgthzcPVbz1usHmkf/exec", {
+
+            method: "POST",
+            body: JSON.stringify(data),
+            headers: { "Content-Type": "application/json" }
+          });
+
+          const result = await response.text();
+
+          if (result === "OK") {
+            statusMsg.textContent = "✅ تم الحجز بنجاح! سيتم إرسال التذكرة بعد تأكيد التحويل.";
+            statusMsg.style.color = "green";
+            form.reset();
+          } else if (result === "FULL") {
+            statusMsg.textContent = "❌ عذرًا، التذاكر نفدت.";
+            statusMsg.style.color = "red";
+          } else {
+            statusMsg.textContent = "❌ حدث خطأ أثناء الحجز: " + result;
+            statusMsg.style.color = "red";
+          }
+        } catch (err) {
+          console.error(err);
+          statusMsg.textContent = "❌ فشل الاتصال بالسيرفر.";
+          statusMsg.style.color = "red";
+        }
+      };
+
+      reader.readAsDataURL(receiptFile);
+    });
+  </script>
+</body>
+</html>
